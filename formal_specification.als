@@ -13,12 +13,11 @@ abstract sig User {
   problems: set Problem
 }
 
-sig Citizen extends User { }
-sig Administrator extends User { }
+sig Citizen, Administrator extends User { }
 
 sig Problem {
   comments: set Comment,
-  state: one State
+  state: State
 }
 
 sig Comment {
@@ -26,8 +25,8 @@ sig Comment {
 }
 
 sig State {
-  actualStatus: one Status,
-  nextStatus: one Status,
+  actualStatus: Status,
+  nextStatus: Status
 }
 
 abstract sig Status { }
@@ -38,7 +37,15 @@ sig InAnalysis, OnHold, InProgress, Concluded extends Status { }
 ------------------------------------------------------------------------------------------
 
 fun getProblems [u: User]: set Problem {
-  u.problems
+  Problem & u.problems
+}
+
+fun getActualStatus [s: State]: Status {
+  s.actualStatus
+}
+
+fun getNextStatus [s: State]: Status {
+  s.nextStatus
 }
 
 ------------------------------------------------------------------------------------------
@@ -46,32 +53,34 @@ fun getProblems [u: User]: set Problem {
 ------------------------------------------------------------------------------------------
 
 pred actualStatusIsInAnalysis [s: State] {
-  s.actualStatus in InAnalysis
+  getActualStatus[s] in InAnalysis
 }
 
 pred nextStatusIsOnHold [s: State] {
-  s.nextStatus in OnHold
+  getNextStatus[s] in OnHold
 }
 
 pred actualStatusIsOnHold [s: State] {
-  s.actualStatus in OnHold
+  getActualStatus[s] in OnHold
 }
 
 pred nextStatusIsInProgress [s: State] {
-  s.nextStatus in InProgress
+  getNextStatus[s] in InProgress
 }
 
 pred actualStatusIsInProgress [s: State] {
-  s.actualStatus in InProgress
+  getActualStatus[s] in InProgress
 }
 
 pred nextStatusIsConcluded [s: State] {
-  s.nextStatus in Concluded
+  getNextStatus[s] in Concluded
 }
 
 pred actualStatusIsConcluded [s: State] {
-  s.actualStatus in Concluded
+  getActualStatus[s] in Concluded
 }
+
+pred show [] {}
 
 ------------------------------------------------------------------------------------------
 --------------->                         Facts                            <---------------
@@ -90,12 +99,8 @@ fact commentsOnlyExistInOneProblem {
 }
 
 fact stateOnlyExistInOneProblem {
-  all s: State | some s.~state
+  all s: State | one s.~state
 }
-
-// fact statusOnlyExistInOneState {
-//   all s: Status | some s.~actualStatus && some s.~nextStatus
-// }
 
 fact eachCommentHasOnlyOneOwner {
   all u: User | one u.~owner
@@ -121,12 +126,57 @@ fact actualStatusIsConcludedNextIsConcluded {
 --------------->                        Asserts                           <---------------
 ------------------------------------------------------------------------------------------
 
+assert testOnlyCitizensCanCreateProblems {
+  all a: Administrator | #a.problems = 0
+}
+
+assert testEachProblemHasOnlyOneCreator {
+  all p: Problem | #(p.~problems) = 1
+}
+
+assert testCommentsOnlyExistInOneProblem {
+  all c: Comment | #(c.~comments) = 1
+}
+
+assert testStateOnlyExistInOneProblem {
+  all s: State | #(s.~state) = 1
+}
+
+assert testEachCommentHasOnlyOneOwner {
+  all u: User | #(u.~owner) = 1
+}
+
+assert testActualStatusIsInAnalysisNextIsOnHold {
+  all s: State | (getActualStatus[s] in InAnalysis) <=> (getNextStatus[s] in OnHold)
+}
+
+assert testActualStatusIsOnHoldNextIsInProgress {
+  all s: State | (getActualStatus[s] in OnHold) <=> (getNextStatus[s] in InProgress)
+}
+
+assert testActualStatusIsInProgressNextIsConcluded {
+  all s: State | (getActualStatus[s] in InProgress) => (getNextStatus[s] in Concluded)
+}
+
+assert testActualStatusIsConcludedNextIsConcluded {
+  all s: State | (getActualStatus[s] in Concluded) => (getNextStatus[s] in Concluded)
+}
+
 ------------------------------------------------------------------------------------------
 --------------->                         Checks                           <---------------
 ------------------------------------------------------------------------------------------
 
+check testOnlyCitizensCanCreateProblems for 50
+check testEachProblemHasOnlyOneCreator for 50
+check testCommentsOnlyExistInOneProblem for 50
+check testStateOnlyExistInOneProblem for 50
+check testEachCommentHasOnlyOneOwner for 50
+check testActualStatusIsInAnalysisNextIsOnHold for 50
+check testActualStatusIsOnHoldNextIsInProgress for 50
+check testActualStatusIsInProgressNextIsConcluded for 50
+check testActualStatusIsConcludedNextIsConcluded for 50
+
 ------------------------------------------------------------------------------------------
 --------------->                         Show                             <---------------
 ------------------------------------------------------------------------------------------
-pred show [] {}
-run show for 4 but 2 Problem
+run show for 20

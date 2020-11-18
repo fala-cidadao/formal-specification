@@ -41,11 +41,11 @@ fun getProblems [u: User]: set Problem {
 }
 
 fun getActualStatus [s: State]: Status {
-  s.actualStatus
+  Status & s.actualStatus
 }
 
 fun getNextStatus [s: State]: Status {
-  s.nextStatus
+  Status & s.nextStatus
 }
 
 ------------------------------------------------------------------------------------------
